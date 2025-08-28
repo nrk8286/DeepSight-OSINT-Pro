@@ -1,0 +1,18 @@
+name = "deepsight-api"
+main = "worker.js"
+compatibility_date = "2024-11-01"
+
+# Routes are injected by deploy script if WORKER_ROUTE_PATTERN is set.
+# D1 and R2 bindings are injected by deploy scripts during deploy.
+# Omitted in dev so `wrangler dev` runs without Cloudflare resources.
+
+# Local dev D1 (SQLite) binding. Wrangler will create a local DB when running `wrangler dev`.
+[[d1_databases]]
+binding = "DB"
+database_name = "deepsight_db"
+database_id = "local-deepsight-db"
+
+# Local dev R2 (Miniflare) binding. Provides in-memory/object storage for preview.
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "local-dev"

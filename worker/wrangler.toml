@@ -1,0 +1,34 @@
+name = "deepsight-api"
+main = "src/index.ts"
+compatibility_date = "2025-08-01"
+
+[vars]
+CORS_ORIGINS = "https://app.gptmarketplus.uk,https://*.pages.dev"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "deepsight_db"
+
+[[r2_buckets]]
+binding = "IMAGES"
+bucket_name = "deepsight-images"
+
+[[vectorize]]
+binding = "VEC_TEXT"
+index_name = "ds-text"
+
+[[vectorize]]
+binding = "VEC_IMAGE"
+index_name = "ds-image"
+
+[[queues.producers]]
+binding = "CRAWL_QUEUE"
+queue   = "deepsight-crawl"
+
+[[queues.consumers]]
+queue = "deepsight-crawl"
+max_batch_size = 10
+max_batch_timeout = 5
+
+[ai]
+binding = "AI"
