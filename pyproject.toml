@@ -1,0 +1,12 @@
+[project]
+name = "deepsight-osint-pro"
+version = "0.0.1"
+description = "Placeholder package for DeepSight-OSINT-Pro"
+requires-python = ">=3.8"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
