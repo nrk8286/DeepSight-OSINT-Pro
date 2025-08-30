@@ -54,3 +54,6 @@ export async function listImages(page = 0, limit = 24) {
 export const enqueueCrawl = (job) => j('POST', '/api/crawl', job);
 
 export const stats = () => j('GET', '/api/stats');
+export const deleteImage = (id) => j('DELETE', `/api/images/${encodeURIComponent(id)}`);
+export const getFlags = () => j('GET', '/api/flags');
+export const track = (event, props) => j('POST', '/api/track', { event, props });

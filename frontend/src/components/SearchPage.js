@@ -28,6 +28,9 @@ export default function SearchPage() {
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') go();
+          }}
           placeholder="query"
           style={{ flex: '0 0 320px' }}
         />
@@ -44,7 +47,7 @@ export default function SearchPage() {
           return (
             <div className="card" key={(m?.id || k || i) + 'k'}>
               {k ? (
-                <img src={r2url(k)} alt="" loading="lazy" />
+                <img src={r2url(k)} alt={m?.text || 'result'} loading="lazy" />
               ) : (
                 <div style={{ height: 180, background: '#f3f4f6' }} />
               )}
