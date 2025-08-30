@@ -36,3 +36,4 @@
 - Optional: `CF_PAGES_DOMAIN`, `WORKER_ROUTE_PATTERN`, `D1_DB_NAME`, `R2_BUCKET`, `KV_NAMESPACE_ID`/`KV_PREVIEW_ID`, `ADMIN_TOKEN`.
 - Admin token: When set, write endpoints require `Authorization: Bearer <token>`. Use `wrangler secret put ADMIN_TOKEN` in production.
 - Dev convenience: `frontend/.env.development.local` with `REACT_APP_API_ORIGIN=http://127.0.0.1:8787` (and optional `REACT_APP_ADMIN_TOKEN`).
+- Feature flags: Bind KV as `KV` (via `wrangler kv namespace create` and `[[kv_namespaces]]` in `backend/wrangler.toml`). Frontend reads flags at boot (and caches `flags.json`); Admin flags UI at `/admin/flags` (requires `ADMIN_TOKEN`).

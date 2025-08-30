@@ -106,8 +106,21 @@ function TitleSync() {
 
 export default function App() {
   const [meta, setMeta] = useState('');
-  const [announcement, setAnnouncement] = useState('');
-  const [flags, setFlags] = useState({});
+  const [announcement, setAnnouncement] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('flags.json') || 'null');
+      return cached?.announcement || '';
+    } catch {
+      return '';
+    }
+  });
+  const [flags, setFlags] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('flags.json') || '{}') || {};
+    } catch {
+      return {};
+    }
+  });
 
   useEffect(() => {
     (async () => {
