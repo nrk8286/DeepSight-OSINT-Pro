@@ -6,6 +6,7 @@ export default function AdminFlags() {
   const [msg, setMsg] = useState('');
   const [domains, setDomains] = useState([]);
   const [status, setStatus] = useState({});
+  const [stack, setStack] = useState({ kv: false, r2: false, d1: false, analytics: false });
 
   useEffect(() => {
     (async () => {
@@ -23,6 +24,16 @@ export default function AdminFlags() {
       } catch {
         setText('{}');
       }
+      // fetch stack status
+      try {
+        const r = await fetch(`${process.env.REACT_APP_API_ORIGIN}/api/status`, {
+          headers: { accept: 'application/json' },
+        });
+        if (r.ok) {
+          const j = await r.json();
+          setStack(j?.info || {});
+        }
+      } catch {}
     })();
   }, []);
 
@@ -94,6 +105,30 @@ export default function AdminFlags() {
         Requires ADMIN token. In dev, set REACT_APP_ADMIN_TOKEN and ADMIN_TOKEN.
       </div>
       <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+        <div className="card" style={{ padding: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <strong>Stack Status</strong>
+            <span className="muted">Worker bindings</span>
+          </div>
+          <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">KV</span>
+              <span className="tag">{stack.kv ? 'ok' : 'off'}</span>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">D1</span>
+              <span className="tag">{stack.d1 ? 'ok' : 'off'}</span>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">R2</span>
+              <span className="tag">{stack.r2 ? 'ok' : 'off'}</span>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">Analytics</span>
+              <span className="tag">{stack.analytics ? 'ok' : 'off'}</span>
+            </div>
+          </div>
+        </div>
         <div className="card" style={{ padding: 12 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <strong>Domains</strong>

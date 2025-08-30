@@ -10,12 +10,12 @@ import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
 import { health, stats, getFlags, track } from './api';
 
-function Header() {
+function Header({ isAdmin, onAdminHelp, onRefreshFlags }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [pro, setPro] = useState(
     () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
   );
-  const [isAdmin, setIsAdmin] = useState(() => {
+  const [hasAdmin, setHasAdmin] = useState(() => {
     try {
       return !!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN);
     } catch {
@@ -34,7 +34,7 @@ function Header() {
   useEffect(() => {
     const onStorage = () => {
       try {
-        setIsAdmin(!!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN));
+        setHasAdmin(!!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN));
       } catch {}
     };
     window.addEventListener('storage', onStorage);
@@ -58,13 +58,20 @@ function Header() {
       <NavLink to="/pricing" className={({ isActive }) => (isActive ? 'active' : '')}>
         Pricing
       </NavLink>
-      {isAdmin ? (
+      {isAdmin || hasAdmin ? (
         <NavLink to="/admin/flags" className={({ isActive }) => (isActive ? 'active' : '')}>
           Admin
         </NavLink>
-      ) : null}
+      ) : (
+        <button className="btn ghost" onClick={onAdminHelp} title="How to enable admin mode">
+          Admin
+        </button>
+      )}
       <div style={{ flex: 1 }} />
-      {isAdmin ? <span className="tag">ADMIN</span> : null}
+      {isAdmin || hasAdmin ? <span className="tag">ADMIN</span> : null}
+      <button className="btn ghost" onClick={onRefreshFlags} title="Refresh feature flags">
+        Refresh Flags
+      </button>
       {pro ? <span className="tag">PRO</span> : null}
       <button className="btn ghost" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
         {theme === 'light' ? 'Dark' : 'Light'} mode
@@ -121,6 +128,14 @@ export default function App() {
       return {};
     }
   });
+  const [showAdminHelp, setShowAdminHelp] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    try {
+      return !!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN);
+    } catch {
+      return !!process.env.REACT_APP_ADMIN_TOKEN;
+    }
+  });
 
   useEffect(() => {
     (async () => {
@@ -145,6 +160,21 @@ export default function App() {
       }
     })();
   }, []);
+
+  async function refreshFlags() {
+    try {
+      const f = await getFlags();
+      const ff = f?.flags || {};
+      setFlags(ff);
+      try {
+        localStorage.setItem('flags.json', JSON.stringify(ff));
+      } catch {}
+      const msg = ff.announcement || '';
+      const dismissed =
+        typeof localStorage !== 'undefined' && localStorage.getItem('announce.dismiss') === msg;
+      if (msg && !dismissed) setAnnouncement(msg);
+    } catch {}
+  }
 
   function UpgradeBanner() {
     const [pro, setPro] = useState(
@@ -173,7 +203,57 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Header />
+      <Header
+        isAdmin={isAdmin}
+        onAdminHelp={() => setShowAdminHelp(true)}
+        onRefreshFlags={refreshFlags}
+      />
+      {showAdminHelp ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowAdminHelp(false)}
+        >
+          <div
+            className="card"
+            style={{ background: 'var(--bg)', padding: 16, width: 520, borderRadius: 8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0 }}>Enable Admin Mode</h3>
+            <ul className="muted">
+              <li>Set a token in your browser: paste below and Save.</li>
+              <li>
+                Or, set <code>REACT_APP_ADMIN_TOKEN</code> in dev or store an{' '}
+                <code>ADMIN_TOKEN</code>
+                secret in the Worker for production.
+              </li>
+            </ul>
+            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+              <input
+                type="password"
+                placeholder="Paste admin token"
+                style={{ flex: 1, minWidth: 280 }}
+                onChange={(e) => {
+                  try {
+                    localStorage.setItem('admin.token', e.target.value);
+                    setIsAdmin(!!e.target.value);
+                  } catch {}
+                }}
+              />
+              <button className="btn" onClick={() => setShowAdminHelp(false)}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {announcement ? (
         <div className="container" style={{ marginTop: 8 }}>
           <div
