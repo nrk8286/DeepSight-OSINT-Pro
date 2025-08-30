@@ -59,6 +59,21 @@ export default function AdminFlags() {
     setStatus(out);
   }
 
+  async function refreshFlags() {
+    setMsg('refreshing flags...');
+    try {
+      const f = await getFlags();
+      const flags = f?.flags || {};
+      setText(JSON.stringify(flags, null, 2));
+      try {
+        localStorage.setItem('flags.json', JSON.stringify(flags));
+      } catch {}
+      setMsg('flags refreshed');
+    } catch (e) {
+      setMsg('failed to refresh flags');
+    }
+  }
+
   async function save() {
     setMsg('saving...');
     try {
@@ -132,9 +147,22 @@ export default function AdminFlags() {
         <div className="card" style={{ padding: 12 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <strong>Domains</strong>
-            <button className="btn ghost" onClick={() => checkDomains(domains)}>
-              Recheck
-            </button>
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                className="btn ghost"
+                onClick={refreshFlags}
+                title="Reload feature flags from KV"
+              >
+                Refresh Flags
+              </button>
+              <button
+                className="btn ghost"
+                onClick={() => checkDomains(domains)}
+                title="Recheck endpoints"
+              >
+                Recheck
+              </button>
+            </div>
           </div>
           <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
             {domains.map((d) => (
