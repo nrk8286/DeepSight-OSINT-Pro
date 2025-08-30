@@ -1,0 +1,21 @@
+# Node
+node_modules/
+**/node_modules/
+npm-debug.log*
+
+# Build outputs
+frontend/build/
+**/dist/
+
+# Wrangler local
+.wrangler/
+backend/.wrangler/
+
+# Env files
+.env*
+frontend/.env.*
+
+# OS
+.DS_Store
+Thumbs.db
+

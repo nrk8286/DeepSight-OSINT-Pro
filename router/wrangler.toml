@@ -1,0 +1,11 @@
+name = "edge-router"
+main = "src/router.ts"
+compatibility_date = "2025-08-01"
+
+routes = [
+  { pattern = "*.gptmarketplus.uk/*", zone_name = "gptmarketplus.uk" }
+]
+
+[[services]]
+binding = "API"
+service = "deepsight-api"

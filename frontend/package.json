@@ -1,0 +1,37 @@
+{
+  "name": "deepsight-osint-pro-frontend",
+  "private": true,
+  "version": "0.3.0",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.0",
+    "react-scripts": "5.0.1"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject",
+    "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,md}\"",
+    "lint": "eslint \"src/**/*.{js,jsx,ts,tsx}\""
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "devDependencies": {
+    "ajv": "^8.17.1",
+    "ajv-keywords": "^5.1.0",
+    "schema-utils": "^3.3.0",
+    "terser-webpack-plugin": "^5.3.10"
+  }
+}
