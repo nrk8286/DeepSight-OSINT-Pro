@@ -27,11 +27,7 @@ const json = (data, init = {}) =>
     },
   });
 
-const text = (body, init = {}) =>
-  new Response(body, {
-    ...init,
-    headers: { ...cors, ...(init.headers || {}) },
-  });
+// simple text responder helper was unused; removed to satisfy lint
 
 const notFound = () => json({ error: "not_found" }, { status: 404 });
 const badRequest = (msg) =>
@@ -86,7 +82,6 @@ function getClientIp(request) {
 async function rateLimit(env, key, limit, windowSec) {
   if (!env.KV) return { ok: true };
   try {
-    const now = Date.now();
     const bucketKey = `rl:${key}`;
     const curStr = await env.KV.get(bucketKey);
     const cur = parseInt(curStr || "0", 10) || 0;
