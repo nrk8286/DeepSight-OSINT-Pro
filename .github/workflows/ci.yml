@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, "maintenance/*" ]
+  pull_request:
+    branches: [ main, "maintenance/*" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-lint-build:
+    name: frontend-lint-build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install deps
+        run: npm ci
+      - name: Lint (ESLint)
+        run: npx eslint "src/**/*.{js,jsx,ts,tsx}" --max-warnings 0 --no-error-on-unmatched-pattern
+      - name: Format check (Prettier)
+        run: npx prettier --check "src/**/*.{js,jsx,ts,tsx,json,css,md}"
+      - name: Build (CRA)
+        run: npm run build --if-present
+
+  backend-lint:
+    name: backend-lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend deps (for ESLint)
+        run: |
+          cd frontend
+          npm ci
+      - name: Lint Worker
+        run: |
+          ./frontend/node_modules/.bin/eslint backend/worker.js --max-warnings 0
+
