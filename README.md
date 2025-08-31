@@ -1,6 +1,7 @@
 # DeepSight-OSINT-Pro
 
 [![CI](https://github.com/nrk8286/DeepSight-OSINT-Pro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/nrk8286/DeepSight-OSINT-Pro/actions/workflows/ci.yml)
+[![Deploy](https://github.com/nrk8286/DeepSight-OSINT-Pro/actions/workflows/deploy.yml/badge.svg?branch=main)](https://github.com/nrk8286/DeepSight-OSINT-Pro/actions/workflows/deploy.yml)
 [![Release](https://img.shields.io/github/v/release/nrk8286/DeepSight-OSINT-Pro?include_prereleases)](https://github.com/nrk8286/DeepSight-OSINT-Pro/releases)
 
 ## Getting Started

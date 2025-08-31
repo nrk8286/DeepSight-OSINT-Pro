@@ -59,4 +59,3 @@ jobs:
           CF_PAGES_PROJECT: ${{ secrets.CF_PAGES_PROJECT }}
         run: |
           wrangler pages deploy frontend/build --project-name "$CF_PAGES_PROJECT"
-
