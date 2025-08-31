@@ -138,6 +138,11 @@ export default function AdminFlags() {
           <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
             <strong>Service Info</strong>
           </div>
+          {loadedAt ? (
+            <div className="muted" style={{ marginTop: 4 }}>
+              Flags loaded at {loadedAt}
+            </div>
+          ) : null}
           <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
             <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
               <span className="muted">API Origin</span>

@@ -53,16 +53,24 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags }) {
       <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : '')}>
         Search
       </NavLink>
-      {!(flags?.proOnly?.includes?.('upload') && !pro) ? (
+      {flags?.proOnly?.includes?.('upload') && !pro ? (
+        <button className="btn ghost" disabled title="Pro-only feature">
+          Upload 🔒
+        </button>
+      ) : (
         <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>
           Upload
         </NavLink>
-      ) : null}
-      {!(flags?.proOnly?.includes?.('crawl') && !pro) ? (
+      )}
+      {flags?.proOnly?.includes?.('crawl') && !pro ? (
+        <button className="btn ghost" disabled title="Pro-only feature">
+          Crawl 🔒
+        </button>
+      ) : (
         <NavLink to="/crawl" className={({ isActive }) => (isActive ? 'active' : '')}>
           Crawl
         </NavLink>
-      ) : null}
+      )}
       <NavLink to="/pricing" className={({ isActive }) => (isActive ? 'active' : '')}>
         Pricing
       </NavLink>
@@ -80,6 +88,7 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags }) {
       <button className="btn ghost" onClick={onRefreshFlags} title="Refresh feature flags">
         Refresh Flags
       </button>
+      {flagsLoadedAt ? <span className="muted">Flags: {flagsLoadedAt}</span> : null}
       {apiHost ? (
         <span className="tag" title={process.env.REACT_APP_API_ORIGIN}>
           API: {apiHost}
@@ -149,6 +158,14 @@ export default function App() {
       return !!process.env.REACT_APP_ADMIN_TOKEN;
     }
   });
+  const [flagsLoadedAt, setFlagsLoadedAt] = useState(() => {
+    try {
+      const ts = localStorage.getItem('flags.loadedAt');
+      return ts ? new Date(Number(ts)).toLocaleTimeString() : '';
+    } catch {
+      return '';
+    }
+  });
 
   useEffect(() => {
     (async () => {
@@ -162,6 +179,8 @@ export default function App() {
           setFlags(ff);
           try {
             localStorage.setItem('flags.json', JSON.stringify(ff));
+            localStorage.setItem('flags.loadedAt', String(Date.now()));
+            setFlagsLoadedAt(new Date().toLocaleTimeString());
           } catch {}
           const msg = ff.announcement || '';
           const dismissed =
@@ -181,6 +200,8 @@ export default function App() {
       setFlags(ff);
       try {
         localStorage.setItem('flags.json', JSON.stringify(ff));
+        localStorage.setItem('flags.loadedAt', String(Date.now()));
+        setFlagsLoadedAt(new Date().toLocaleTimeString());
       } catch {}
       const msg = ff.announcement || '';
       const dismissed =
