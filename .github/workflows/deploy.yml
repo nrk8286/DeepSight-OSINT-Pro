@@ -1,0 +1,61 @@
+name: Deploy (main)
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install wrangler
+        run: npm i -g wrangler@4
+      - name: Deploy Worker and capture origin
+        id: worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          # Write a minimal wrangler.toml using provided D1 id/name if available
+          if [[ -n "${{ secrets.D1_DB_NAME }}" && -n "${{ secrets.D1_DB_ID }}" ]]; then
+            cat > backend/wrangler.toml <<EOF
+          name = "deepsight-api"
+          main = "worker.js"
+          compatibility_date = "2024-11-01"
+          [[d1_databases]]
+          binding = "DB"
+          database_name = "${{ secrets.D1_DB_NAME }}"
+          database_id = "${{ secrets.D1_DB_ID }}"
+          EOF
+          fi
+          out="$(wrangler --config backend/wrangler.toml deploy 2>&1 | tee /dev/stderr)"
+          url="$(printf "%s" "$out" | sed -n 's@.*\(https://[A-Za-z0-9.-]*\.workers\.dev\).*@\1@p' | head -n1)"
+          if [[ -z "$url" ]]; then
+            echo "Could not parse workers.dev URL from deploy output" >&2; exit 1
+          fi
+          echo "origin=$url" >> "$GITHUB_OUTPUT"
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          REACT_APP_API_ORIGIN: ${{ steps.worker.outputs.origin }}
+        run: |
+          npm ci
+          npm run build
+      - name: Deploy Pages
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CF_PAGES_PROJECT: ${{ secrets.CF_PAGES_PROJECT }}
+        run: |
+          wrangler pages deploy frontend/build --project-name "$CF_PAGES_PROJECT"

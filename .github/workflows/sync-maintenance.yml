@@ -1,0 +1,51 @@
+name: Sync maintenance branch
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  open-sync-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Create PR from main to maintenance/v0.3.x if needed
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const base = 'maintenance/v0.3.x';
+            const head = 'main';
+            try {
+              // Check if PR already exists
+              const { data: prs } = await github.rest.pulls.list({ owner, repo, state: 'open', base, head: `${owner}:${head}` });
+              if (prs.length > 0) {
+                core.info('Sync PR already open.');
+                return;
+              }
+              // Try to open PR
+              await github.rest.pulls.create({
+                owner,
+                repo,
+                title: 'chore(maintenance): sync main into maintenance/v0.3.x',
+                head,
+                base,
+                body: 'Automated periodic sync of main into maintenance/v0.3.x.'
+              });
+              core.info('Opened sync PR.');
+            } catch (e) {
+              if (e?.status === 422) {
+                core.info('No commits between branches or validation failed; skipping.');
+                return;
+              }
+              throw e;
+            }
+
