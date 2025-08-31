@@ -7,6 +7,8 @@ export default function AdminFlags() {
   const [domains, setDomains] = useState([]);
   const [status, setStatus] = useState({});
   const [stack, setStack] = useState({ kv: false, r2: false, d1: false, analytics: false });
+  const apiOrigin = process.env.REACT_APP_API_ORIGIN || '';
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -120,6 +122,40 @@ export default function AdminFlags() {
         Requires ADMIN token. In dev, set REACT_APP_ADMIN_TOKEN and ADMIN_TOKEN.
       </div>
       <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+        <div className="card" style={{ padding: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>Service Info</strong>
+          </div>
+          <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="muted">API Origin</span>
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <span
+                  className="muted"
+                  style={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  title={apiOrigin}
+                >
+                  {apiOrigin || '-'}
+                </span>
+                <button
+                  className="btn ghost"
+                  title="Copy API URL"
+                  onClick={async () => {
+                    try {
+                      if (apiOrigin) {
+                        await navigator.clipboard.writeText(apiOrigin);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      }
+                    } catch {}
+                  }}
+                >
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="card" style={{ padding: 12 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <strong>Stack Status</strong>
