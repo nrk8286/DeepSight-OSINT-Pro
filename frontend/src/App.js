@@ -10,7 +10,7 @@ import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
 import { health, stats, getFlags, track } from './api';
 
-function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt }) {
+function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt, apiOk }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [pro, setPro] = useState(
     () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
@@ -54,18 +54,22 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt }) 
         Search
       </NavLink>
       {flags?.proOnly?.includes?.('upload') && !pro ? (
-        <button className="btn ghost" disabled title="Pro-only feature">
-          Upload 🔒
-        </button>
+        flags?.showHints ? (
+          <button className="btn ghost" disabled title="Pro-only feature">
+            Upload 🔒
+          </button>
+        ) : null
       ) : (
         <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>
           Upload
         </NavLink>
       )}
       {flags?.proOnly?.includes?.('crawl') && !pro ? (
-        <button className="btn ghost" disabled title="Pro-only feature">
-          Crawl 🔒
-        </button>
+        flags?.showHints ? (
+          <button className="btn ghost" disabled title="Pro-only feature">
+            Crawl 🔒
+          </button>
+        ) : null
       ) : (
         <NavLink to="/crawl" className={({ isActive }) => (isActive ? 'active' : '')}>
           Crawl
@@ -92,6 +96,11 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt }) 
       {apiHost ? (
         <span className="tag" title={process.env.REACT_APP_API_ORIGIN}>
           API: {apiHost}
+        </span>
+      ) : null}
+      {typeof apiOk === 'boolean' ? (
+        <span className="tag" title="API health">
+          {apiOk ? 'API OK' : 'API ERR'}
         </span>
       ) : null}
       {pro ? <span className="tag">PRO</span> : null}
@@ -166,6 +175,7 @@ export default function App() {
       return '';
     }
   });
+  const [apiOk, setApiOk] = useState();
 
   useEffect(() => {
     (async () => {
@@ -173,6 +183,7 @@ export default function App() {
         const h = await health();
         const s = await stats().catch(() => ({}));
         setMeta(h.ok ? `API OK · imgs: ${s.images ?? '-'}` : 'API error');
+        setApiOk(!!h.ok);
         try {
           const f = await getFlags();
           const ff = f?.flags || {};
@@ -184,7 +195,9 @@ export default function App() {
           } catch {}
           const msg = ff.announcement || '';
           const dismissed =
-            typeof localStorage !== 'undefined' && localStorage.getItem('announce.dismiss') === msg;
+            typeof localStorage !== 'undefined' &&
+            (localStorage.getItem('announce.dismiss') === msg ||
+              localStorage.getItem('announce.dismiss') === '*');
           if (msg && !dismissed) setAnnouncement(msg);
         } catch {}
       } catch {
@@ -205,7 +218,9 @@ export default function App() {
       } catch {}
       const msg = ff.announcement || '';
       const dismissed =
-        typeof localStorage !== 'undefined' && localStorage.getItem('announce.dismiss') === msg;
+        typeof localStorage !== 'undefined' &&
+        (localStorage.getItem('announce.dismiss') === msg ||
+          localStorage.getItem('announce.dismiss') === '*');
       if (msg && !dismissed) setAnnouncement(msg);
     } catch {}
   }
@@ -243,6 +258,7 @@ export default function App() {
         onRefreshFlags={refreshFlags}
         flags={flags}
         flagsLoadedAt={flagsLoadedAt}
+        apiOk={apiOk}
       />
       {showAdminHelp ? (
         <div
@@ -307,6 +323,17 @@ export default function App() {
               }}
             >
               Dismiss
+            </button>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                try {
+                  localStorage.setItem('announce.dismiss', '*');
+                } catch {}
+                setAnnouncement('');
+              }}
+            >
+              Dismiss all
             </button>
           </div>
         </div>
