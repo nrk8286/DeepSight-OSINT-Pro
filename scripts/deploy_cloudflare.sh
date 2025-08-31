@@ -40,7 +40,23 @@ BACKEND_DIR="${ROOT}/backend"
 echo "Checking tools..."
 command -v node >/dev/null || { echo "node required"; exit 1; }
 command -v npm >/dev/null || { echo "npm required"; exit 1; }
-command -v wrangler >/dev/null || { echo "wrangler required: npm i -g wrangler"; exit 1; }
+
+find_wrangler() {
+  if command -v wrangler >/dev/null 2>&1; then
+    echo "wrangler"
+    return
+  fi
+  if [ -n "${APPDATA:-}" ]; then
+    for c in "$APPDATA/npm/wrangler" "$APPDATA/npm/wrangler.cmd"; do
+      if [ -x "$c" ]; then
+        echo "$c"
+        return
+      fi
+    done
+  fi
+  echo "wrangler"
+}
+WR=$(find_wrangler)
 
 echo "Building CRA in $FRONTEND_DIR with REACT_APP_API_ORIGIN=$REACT_APP_API_ORIGIN"
 if [ ! -f "$FRONTEND_DIR/package.json" ]; then
@@ -63,12 +79,12 @@ pushd "$FRONTEND_DIR" >/dev/null
 popd >/dev/null
 
 echo "Ensure D1 exists..."
-D1_LIST_JSON="$(CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID" wrangler d1 list --json || echo '[]')"
+D1_LIST_JSON="$(CLOUDFLARE_API_TOKEN="$CLOUDFLARE_API_TOKEN" CLOUDFLARE_ACCOUNT_ID="$CLOUDFLARE_ACCOUNT_ID" "$WR" d1 list --json || echo '[]')"
 DB_ID="$(echo "$D1_LIST_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);const name=process.env.D1_DB_NAME||"deepsight_db";const m=(Array.isArray(j)?j:[]).find(x=>x.name===name);if(m&&m.uuid){console.log(m.uuid);process.exit(0)}process.exit(1)}catch(e){process.exit(2)}});')"
 
 if [ -z "${DB_ID:-}" ]; then
   echo "Creating D1 $D1_DB_NAME..."
-  CREATE_JSON="$(wrangler d1 create "$D1_DB_NAME" --json)"
+  CREATE_JSON="$("$WR" d1 create "$D1_DB_NAME" --json)"
   DB_ID="$(echo "$CREATE_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);console.log(j.uuid||j.id||"")}catch(e){}});')"
   if [ -z "$DB_ID" ]; then
     echo "Failed to create D1"
@@ -79,7 +95,7 @@ echo "D1 database_id: $DB_ID"
 
 if [ -f "$BACKEND_DIR/schema.sql" ]; then
   echo "Applying schema.sql to D1..."
-  wrangler d1 execute "$D1_DB_NAME" --file "$BACKEND_DIR/schema.sql" || true
+  "$WR" d1 execute "$D1_DB_NAME" --file "$BACKEND_DIR/schema.sql" || true
 fi
 
 echo "Injecting wrangler.toml..."
@@ -90,10 +106,10 @@ fi
 R2_BLOCK=""
 if [ -n "$R2_BUCKET" ]; then
   echo "Ensuring R2 bucket: $R2_BUCKET"
-  R2_LIST_JSON="$(wrangler r2 bucket list --json || echo '[]')"
+  R2_LIST_JSON="$("$WR" r2 bucket list --json || echo '[]')"
   HAS_BUCKET="$(echo "$R2_LIST_JSON" | node -e 'let d="";process.stdin.on("data",c=>d+=c).on("end",()=>{try{const j=JSON.parse(d);const n=process.env.R2_BUCKET;const m=(Array.isArray(j)?j:[]).find(x=>x.name===n);process.exit(m?0:1)}catch(e){process.exit(2)}});' && echo yes || echo no)"
   if [ "$HAS_BUCKET" = "no" ]; then
-    wrangler r2 bucket create "$R2_BUCKET" || true
+    "$WR" r2 bucket create "$R2_BUCKET" || true
   fi
   R2_BLOCK="\n[[r2_buckets]]\nbinding = \"R2\"\nbucket_name = \"${R2_BUCKET}\""
 fi
@@ -112,15 +128,15 @@ EOF
 
 echo "Deploying API Worker..."
 pushd "$BACKEND_DIR" >/dev/null
-  wrangler deploy
+  "$WR" deploy
 popd >/dev/null
 
 echo "Deploying Pages..."
-wrangler pages deploy "$FRONTEND_DIR/build" --project-name "$CF_PAGES_PROJECT"
+"$WR" pages deploy "$FRONTEND_DIR/build" --project-name "$CF_PAGES_PROJECT"
 
 if [ -n "${CF_PAGES_DOMAIN:-}" ]; then
   echo "Attaching custom domain to Pages: $CF_PAGES_DOMAIN"
-  wrangler pages domains add "$CF_PAGES_PROJECT" "$CF_PAGES_DOMAIN" || true
+  "$WR" pages domains add "$CF_PAGES_PROJECT" "$CF_PAGES_DOMAIN" || true
 fi
 
 echo "Done."
