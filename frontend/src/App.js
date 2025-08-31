@@ -10,7 +10,7 @@ import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
 import { health, stats, getFlags, track } from './api';
 
-function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags }) {
+function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [pro, setPro] = useState(
     () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
@@ -242,6 +242,7 @@ export default function App() {
         onAdminHelp={() => setShowAdminHelp(true)}
         onRefreshFlags={refreshFlags}
         flags={flags}
+        flagsLoadedAt={flagsLoadedAt}
       />
       {showAdminHelp ? (
         <div

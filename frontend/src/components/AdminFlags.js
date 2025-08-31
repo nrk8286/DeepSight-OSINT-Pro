@@ -10,6 +10,7 @@ export default function AdminFlags() {
   const apiOrigin = process.env.REACT_APP_API_ORIGIN || '';
   const [copied, setCopied] = useState(false);
   const [ann, setAnn] = useState('');
+  const [loadedAt, setLoadedAt] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -18,6 +19,9 @@ export default function AdminFlags() {
         const flags = f?.flags || {};
         setText(JSON.stringify(flags, null, 2));
         setAnn(flags?.announcement || '');
+        try {
+          setLoadedAt(new Date().toLocaleTimeString());
+        } catch {}
         const ds =
           Array.isArray(flags.domains) && flags.domains.length
             ? flags.domains
@@ -70,6 +74,9 @@ export default function AdminFlags() {
       const flags = f?.flags || {};
       setText(JSON.stringify(flags, null, 2));
       setAnn(flags?.announcement || '');
+      try {
+        setLoadedAt(new Date().toLocaleTimeString());
+      } catch {}
       try {
         localStorage.setItem('flags.json', JSON.stringify(flags));
       } catch {}
