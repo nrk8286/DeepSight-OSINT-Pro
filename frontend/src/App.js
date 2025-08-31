@@ -10,7 +10,15 @@ import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
 import { health, stats, getFlags, track } from './api';
 
-function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt, apiOk }) {
+function Header({
+  isAdmin,
+  onAdminHelp,
+  onRefreshFlags,
+  onReloadConfig,
+  flags,
+  flagsLoadedAt,
+  apiOk,
+}) {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [pro, setPro] = useState(
     () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
@@ -93,6 +101,13 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags, flagsLoadedAt, ap
         Refresh Flags
       </button>
       {flagsLoadedAt ? <span className="muted">Flags: {flagsLoadedAt}</span> : null}
+      <button
+        className="btn ghost"
+        onClick={onReloadConfig}
+        title="Clear cached flags and announcement, then reload"
+      >
+        Reload Config
+      </button>
       {apiHost ? (
         <span className="tag" title={process.env.REACT_APP_API_ORIGIN}>
           API: {apiHost}
@@ -225,6 +240,17 @@ export default function App() {
     } catch {}
   }
 
+  function reloadConfig() {
+    try {
+      localStorage.removeItem('flags.json');
+      localStorage.removeItem('flags.loadedAt');
+      localStorage.removeItem('announce.dismiss');
+    } catch {}
+    try {
+      window.location.reload();
+    } catch {}
+  }
+
   function UpgradeBanner() {
     const [pro, setPro] = useState(
       () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
@@ -256,6 +282,7 @@ export default function App() {
         isAdmin={isAdmin}
         onAdminHelp={() => setShowAdminHelp(true)}
         onRefreshFlags={refreshFlags}
+        onReloadConfig={reloadConfig}
         flags={flags}
         flagsLoadedAt={flagsLoadedAt}
         apiOk={apiOk}
