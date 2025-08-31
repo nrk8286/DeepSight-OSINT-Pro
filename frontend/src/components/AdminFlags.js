@@ -9,6 +9,7 @@ export default function AdminFlags() {
   const [stack, setStack] = useState({ kv: false, r2: false, d1: false, analytics: false });
   const apiOrigin = process.env.REACT_APP_API_ORIGIN || '';
   const [copied, setCopied] = useState(false);
+  const [ann, setAnn] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -16,6 +17,7 @@ export default function AdminFlags() {
         const f = await getFlags();
         const flags = f?.flags || {};
         setText(JSON.stringify(flags, null, 2));
+        setAnn(flags?.announcement || '');
         const ds =
           Array.isArray(flags.domains) && flags.domains.length
             ? flags.domains
@@ -67,6 +69,7 @@ export default function AdminFlags() {
       const f = await getFlags();
       const flags = f?.flags || {};
       setText(JSON.stringify(flags, null, 2));
+      setAnn(flags?.announcement || '');
       try {
         localStorage.setItem('flags.json', JSON.stringify(flags));
       } catch {}
@@ -74,6 +77,15 @@ export default function AdminFlags() {
     } catch (e) {
       setMsg('failed to refresh flags');
     }
+  }
+
+  function updateAnnouncement(next) {
+    setAnn(next);
+    try {
+      const obj = JSON.parse(text || '{}') || {};
+      obj.announcement = next || '';
+      setText(JSON.stringify(obj, null, 2));
+    } catch {}
   }
 
   async function save() {
@@ -154,6 +166,28 @@ export default function AdminFlags() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+        <div className="card" style={{ padding: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>Announcement</strong>
+            <button
+              className="btn ghost"
+              onClick={() => updateAnnouncement('')}
+              title="Clear announcement"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <input
+              type="text"
+              placeholder="Banner message shown on load"
+              value={ann}
+              onChange={(e) => updateAnnouncement(e.target.value)}
+              style={{ flex: 1, minWidth: 280 }}
+            />
+            <span className="muted">Edit and click Save below to persist.</span>
           </div>
         </div>
         <div className="card" style={{ padding: 12 }}>

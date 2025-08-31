@@ -10,7 +10,7 @@ import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
 import { health, stats, getFlags, track } from './api';
 
-function Header({ isAdmin, onAdminHelp, onRefreshFlags }) {
+function Header({ isAdmin, onAdminHelp, onRefreshFlags, flags }) {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [pro, setPro] = useState(
     () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
@@ -40,6 +40,10 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags }) {
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+  let apiHost = '';
+  try {
+    apiHost = new URL(process.env.REACT_APP_API_ORIGIN || '').host;
+  } catch {}
   return (
     <header className="container" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <img src="/logo.svg" alt="DeepSight" width={28} height={28} />
@@ -49,12 +53,16 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags }) {
       <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : '')}>
         Search
       </NavLink>
-      <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>
-        Upload
-      </NavLink>
-      <NavLink to="/crawl" className={({ isActive }) => (isActive ? 'active' : '')}>
-        Crawl
-      </NavLink>
+      {!(flags?.proOnly?.includes?.('upload') && !pro) ? (
+        <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Upload
+        </NavLink>
+      ) : null}
+      {!(flags?.proOnly?.includes?.('crawl') && !pro) ? (
+        <NavLink to="/crawl" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Crawl
+        </NavLink>
+      ) : null}
       <NavLink to="/pricing" className={({ isActive }) => (isActive ? 'active' : '')}>
         Pricing
       </NavLink>
@@ -72,6 +80,11 @@ function Header({ isAdmin, onAdminHelp, onRefreshFlags }) {
       <button className="btn ghost" onClick={onRefreshFlags} title="Refresh feature flags">
         Refresh Flags
       </button>
+      {apiHost ? (
+        <span className="tag" title={process.env.REACT_APP_API_ORIGIN}>
+          API: {apiHost}
+        </span>
+      ) : null}
       {pro ? <span className="tag">PRO</span> : null}
       <button className="btn ghost" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
         {theme === 'light' ? 'Dark' : 'Light'} mode
@@ -207,6 +220,7 @@ export default function App() {
         isAdmin={isAdmin}
         onAdminHelp={() => setShowAdminHelp(true)}
         onRefreshFlags={refreshFlags}
+        flags={flags}
       />
       {showAdminHelp ? (
         <div
