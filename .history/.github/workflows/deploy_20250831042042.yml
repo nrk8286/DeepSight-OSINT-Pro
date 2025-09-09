@@ -6,29 +6,26 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  deploy-backend:
+  deploy:
     runs-on: ubuntu-latest
-    outputs:
-      origin: ${{ steps.worker.outputs.origin || steps.origin.outputs.origin }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          node-version: 18
           cache: 'npm'
           cache-dependency-path: frontend/package-lock.json
       - name: Install wrangler
-        run: npm install -g wrangler@3
+        run: npm i -g wrangler@4
       - name: Resolve frontend origin (fallback)
         id: origin
         run: echo "origin=${{ secrets.REACT_APP_API_ORIGIN }}" >> "$GITHUB_OUTPUT"
-        run: npm i -g wrangler@4
       - name: Deploy Worker and capture origin
         id: worker
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -36,11 +33,13 @@ jobs:
           D1_DB_ID: ${{ secrets.D1_DB_ID }}
         run: |
           set -euo pipefail
+          # Write a minimal wrangler.toml
           cat > backend/wrangler.toml <<EOF
           name = "deepsight-api"
           main = "worker.js"
-          compatibility_date = "2023-10-30"
+          compatibility_date = "2024-11-01"
           EOF
+          # Add D1 binding if available
           if [[ -n "${D1_DB_NAME:-}" && -n "${D1_DB_ID:-}" ]]; then
             cat >> backend/wrangler.toml <<EOF
           [[d1_databases]]
@@ -49,22 +48,12 @@ jobs:
           database_id = "$D1_DB_ID"
           EOF
           fi
-          out="$(wrangler deploy --config backend/wrangler.toml 2>&1 | tee /dev/stderr)"
+          out="$(wrangler --config backend/wrangler.toml deploy 2>&1 | tee /dev/stderr)"
           url="$(printf "%s" "$out" | sed -n 's@.*\(https://[A-Za-z0-9.-]*\.workers\.dev\).*@\1@p' | head -n1)"
           if [[ -z "$url" ]]; then
             echo "Could not parse workers.dev URL from deploy output" >&2; exit 1
           fi
           echo "origin=$url" >> "$GITHUB_OUTPUT"
-
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
       - name: Install frontend dependencies
         working-directory: frontend
         run: npm ci
@@ -73,44 +62,18 @@ jobs:
         uses: actions/cache@v4
         with:
           path: frontend/build
+          # Create a cache key based on source files that affect the build output
           key: ${{ runner.os }}-frontend-build-${{ hashFiles('frontend/package-lock.json', 'frontend/src/**/*', 'frontend/public/**/*') }}
       - name: Build frontend
         if: steps.cache-frontend-build.outputs.cache-hit != 'true'
         working-directory: frontend
         env:
-          # Use a placeholder that we can safely replace later
-          REACT_APP_API_ORIGIN: "__API_ORIGIN_PLACEHOLDER__"
+          REACT_APP_API_ORIGIN: ${{ steps.worker.outputs.origin || steps.origin.outputs.origin }}
         run: npm run build
-      - name: Upload frontend build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/build
-
-  deploy-pages:
-    runs-on: ubuntu-latest
-    needs: [deploy-backend, build-frontend]
-    steps:
-      - name: Download frontend build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: frontend-build
-          path: frontend/build
-      - name: Install wrangler
-        run: npm install -g wrangler@3
-      - name: Replace API origin placeholder
-          REACT_APP_API_ORIGIN: ${{ steps.worker.outputs.origin }}
-        run: |
-          set -euo pipefail
-          API_ORIGIN="${{ needs.deploy-backend.outputs.origin }}"
-          echo "Replacing placeholder with API origin: $API_ORIGIN"
-          # Grep for files containing the placeholder and use xargs to pass them to sed for replacement.
-          # This is safer and more efficient than a blind find-and-replace.
-          grep -rl '__API_ORIGIN_PLACEHOLDER__' frontend/build/static/js | xargs sed -i "s|__API_ORIGIN_PLACEHOLDER__|$API_ORIGIN|g"
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy Pages
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CF_PAGES_PROJECT: ${{ secrets.CF_PAGES_PROJECT }}
         run: |
-          wrangler pages deploy frontend/build --project-name "$CF_PAGES_PROJECT" --branch main
+          wrangler pages deploy frontend/build --project-name "$CF_PAGES_PROJECT"

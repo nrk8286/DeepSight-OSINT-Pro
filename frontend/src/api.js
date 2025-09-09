@@ -41,6 +41,11 @@ export async function searchText(q, k = 24) {
   return j('GET', `/api/search${qs}`);
 }
 
+export async function deepSearch(q, tor, k = 24) {
+  const qs = `?q=${encodeURIComponent(q)}&tor=${encodeURIComponent(String(tor))}&k=${encodeURIComponent(String(k))}`;
+  return j('GET', `/api/deep-search${qs}`);
+}
+
 export async function searchPHash(phash) {
   const qs = `?kind=phash&phash=${encodeURIComponent(phash)}`;
   return j('GET', `/api/search${qs}`);

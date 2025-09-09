@@ -4,6 +4,7 @@ import Gallery from './components/Gallery';
 import SearchPage from './components/SearchPage';
 import UploadPage from './components/UploadPage';
 import CrawlPage from './components/CrawlPage';
+import DeepSearchPage from './components/DeepSearchPage';
 import PricingPage from './components/PricingPage';
 import ThankYouPage from './components/ThankYouPage';
 import ProGate from './components/ProGate';
@@ -83,6 +84,9 @@ function Header({
           Crawl
         </NavLink>
       )}
+      <NavLink to="/deep-search" className={({ isActive }) => (isActive ? 'active' : '')}>
+        Deep Search
+      </NavLink>
       <NavLink to="/pricing" className={({ isActive }) => (isActive ? 'active' : '')}>
         Pricing
       </NavLink>
@@ -146,6 +150,7 @@ function TitleSync() {
       '/search': 'DeepSight — Search',
       '/upload': 'DeepSight — Upload',
       '/crawl': 'DeepSight — Crawl',
+      '/deep-search': 'DeepSight — Deep Search',
       '/pricing': 'DeepSight — Pricing',
       '/thank-you': 'DeepSight — Thank You',
     };
@@ -397,6 +402,7 @@ export default function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/thank-you" element={<ThankYouPage />} />
         <Route path="/admin/flags" element={<AdminFlags />} />
+        <Route path="/deep-search" element={<DeepSearchPage />} />
       </Routes>
       <Footer meta={meta} />
     </BrowserRouter>

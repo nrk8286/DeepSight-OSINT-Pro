@@ -216,6 +216,25 @@ async function router(request, env) {
     return json({ matches: [] });
   }
 
+  if (pathname === "/api/deep-search") {
+    const q = (searchParams.get("q") || "").trim();
+    const tor = (searchParams.get("tor") || "false").toLowerCase() === "true";
+    const k = Math.min(
+      parseInt(searchParams.get("k") || "24", 10) || 24,
+      200,
+    );
+
+    if (!q) return json({ results: [] });
+
+    if (tor) {
+      // Placeholder for Tor search
+      return json({ results: [{ metadata: { url: `https://example.onion/image.jpg`, text: "Tor image" } }] });
+    } else {
+      // Placeholder for regular web search
+      return json({ results: [{ metadata: { url: `https://example.com/image.jpg`, text: "Web image" } }] });
+    }
+  }
+
   if (pathname === "/api/stats") {
     try {
       const r = await env.DB.prepare(
@@ -371,7 +390,7 @@ async function router(request, env) {
     const key = decodeURIComponent(pathname.replace("/r2/", ""));
     const k = safeKey(key);
     if (!k) return badRequest("invalid key");
-    const obj = await env.R2.get(k);
+    const obj = await env.R2.get(.k);
     if (!obj) return notFound();
     const headers = { ...cors };
     const ct = obj.httpMetadata?.contentType || "application/octet-stream";
@@ -414,7 +433,7 @@ async function router(request, env) {
         .all();
       const row = rowRes?.results?.[0];
       if (!row) return notFound();
-      const target = row.r2_key
+      const target = row.r2_.key
         ? env.R2_PUBLIC_BASE
           ? `${env.R2_PUBLIC_BASE.replace(/\/$/, "")}/${encodeURIComponent(row.r2_key)}`
           : `${url.origin}/r2/${encodeURIComponent(row.r2_key)}`

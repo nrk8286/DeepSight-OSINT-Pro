@@ -18,17 +18,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          node-version: 18
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
       - name: Install wrangler
         run: npm install -g wrangler@3
       - name: Resolve frontend origin (fallback)
         id: origin
         run: echo "origin=${{ secrets.REACT_APP_API_ORIGIN }}" >> "$GITHUB_OUTPUT"
-        run: npm i -g wrangler@4
       - name: Deploy Worker and capture origin
         id: worker
+        if: ${{ secrets.CLOUDFLARE_API_TOKEN != '' && secrets.CLOUDFLARE_ACCOUNT_ID != '' }}
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
@@ -99,7 +96,6 @@ jobs:
       - name: Install wrangler
         run: npm install -g wrangler@3
       - name: Replace API origin placeholder
-          REACT_APP_API_ORIGIN: ${{ steps.worker.outputs.origin }}
         run: |
           set -euo pipefail
           API_ORIGIN="${{ needs.deploy-backend.outputs.origin }}"
