@@ -29,7 +29,7 @@
     ]
   },
   "devDependencies": {
-    "ajv": "^8.17.1",
+    "ajv": "^8.18.0",
     "ajv-keywords": "^5.1.0",
     "schema-utils": "^3.3.0",
     "terser-webpack-plugin": "^5.3.10"
