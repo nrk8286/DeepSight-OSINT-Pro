@@ -6,6 +6,11 @@ export default function AdminFlags() {
   const [msg, setMsg] = useState('');
   const [domains, setDomains] = useState([]);
   const [status, setStatus] = useState({});
+  const [stack, setStack] = useState({ kv: false, r2: false, d1: false, analytics: false });
+  const apiOrigin = process.env.REACT_APP_API_ORIGIN || '';
+  const [copied, setCopied] = useState(false);
+  const [ann, setAnn] = useState('');
+  const [loadedAt, setLoadedAt] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -13,6 +18,10 @@ export default function AdminFlags() {
         const f = await getFlags();
         const flags = f?.flags || {};
         setText(JSON.stringify(flags, null, 2));
+        setAnn(flags?.announcement || '');
+        try {
+          setLoadedAt(new Date().toLocaleTimeString());
+        } catch {}
         const ds =
           Array.isArray(flags.domains) && flags.domains.length
             ? flags.domains
@@ -23,6 +32,16 @@ export default function AdminFlags() {
       } catch {
         setText('{}');
       }
+      // fetch stack status
+      try {
+        const r = await fetch(`${process.env.REACT_APP_API_ORIGIN}/api/status`, {
+          headers: { accept: 'application/json' },
+        });
+        if (r.ok) {
+          const j = await r.json();
+          setStack(j?.info || {});
+        }
+      } catch {}
     })();
   }, []);
 
@@ -46,6 +65,34 @@ export default function AdminFlags() {
       }),
     );
     setStatus(out);
+  }
+
+  async function refreshFlags() {
+    setMsg('refreshing flags...');
+    try {
+      const f = await getFlags();
+      const flags = f?.flags || {};
+      setText(JSON.stringify(flags, null, 2));
+      setAnn(flags?.announcement || '');
+      try {
+        setLoadedAt(new Date().toLocaleTimeString());
+      } catch {}
+      try {
+        localStorage.setItem('flags.json', JSON.stringify(flags));
+      } catch {}
+      setMsg('flags refreshed');
+    } catch (e) {
+      setMsg('failed to refresh flags');
+    }
+  }
+
+  function updateAnnouncement(next) {
+    setAnn(next);
+    try {
+      const obj = JSON.parse(text || '{}') || {};
+      obj.announcement = next || '';
+      setText(JSON.stringify(obj, null, 2));
+    } catch {}
   }
 
   async function save() {
@@ -95,11 +142,109 @@ export default function AdminFlags() {
       </div>
       <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
         <div className="card" style={{ padding: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>Service Info</strong>
+          </div>
+          {loadedAt ? (
+            <div className="muted" style={{ marginTop: 4 }}>
+              Flags loaded at {loadedAt}
+            </div>
+          ) : null}
+          <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+              <span className="muted">API Origin</span>
+              <div className="row" style={{ gap: 8, alignItems: 'center' }}>
+                <span
+                  className="muted"
+                  style={{ maxWidth: 320, overflow: 'hidden', textOverflow: 'ellipsis' }}
+                  title={apiOrigin}
+                >
+                  {apiOrigin || '-'}
+                </span>
+                <button
+                  className="btn ghost"
+                  title="Copy API URL"
+                  onClick={async () => {
+                    try {
+                      if (apiOrigin) {
+                        await navigator.clipboard.writeText(apiOrigin);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 1500);
+                      }
+                    } catch {}
+                  }}
+                >
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="card" style={{ padding: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
+            <strong>Announcement</strong>
+            <button
+              className="btn ghost"
+              onClick={() => updateAnnouncement('')}
+              title="Clear announcement"
+            >
+              Clear
+            </button>
+          </div>
+          <div className="row" style={{ gap: 8, marginTop: 8 }}>
+            <input
+              type="text"
+              placeholder="Banner message shown on load"
+              value={ann}
+              onChange={(e) => updateAnnouncement(e.target.value)}
+              style={{ flex: 1, minWidth: 280 }}
+            />
+            <span className="muted">Edit and click Save below to persist.</span>
+          </div>
+        </div>
+        <div className="card" style={{ padding: 12 }}>
+          <div className="row" style={{ justifyContent: 'space-between' }}>
+            <strong>Stack Status</strong>
+            <span className="muted">Worker bindings</span>
+          </div>
+          <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">KV</span>
+              <span className="tag">{stack.kv ? 'ok' : 'off'}</span>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">D1</span>
+              <span className="tag">{stack.d1 ? 'ok' : 'off'}</span>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">R2</span>
+              <span className="tag">{stack.r2 ? 'ok' : 'off'}</span>
+            </div>
+            <div className="row" style={{ justifyContent: 'space-between' }}>
+              <span className="muted">Analytics</span>
+              <span className="tag">{stack.analytics ? 'ok' : 'off'}</span>
+            </div>
+          </div>
+        </div>
+        <div className="card" style={{ padding: 12 }}>
           <div className="row" style={{ justifyContent: 'space-between' }}>
             <strong>Domains</strong>
-            <button className="btn ghost" onClick={() => checkDomains(domains)}>
-              Recheck
-            </button>
+            <div className="row" style={{ gap: 8 }}>
+              <button
+                className="btn ghost"
+                onClick={refreshFlags}
+                title="Reload feature flags from KV"
+              >
+                Refresh Flags
+              </button>
+              <button
+                className="btn ghost"
+                onClick={() => checkDomains(domains)}
+                title="Recheck endpoints"
+              >
+                Recheck
+              </button>
+            </div>
           </div>
           <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
             {domains.map((d) => (

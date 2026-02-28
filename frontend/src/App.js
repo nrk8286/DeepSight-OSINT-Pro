@@ -10,12 +10,20 @@ import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
 import { health, stats, getFlags, track } from './api';
 
-function Header() {
+function Header({
+  isAdmin,
+  onAdminHelp,
+  onRefreshFlags,
+  onReloadConfig,
+  flags,
+  flagsLoadedAt,
+  apiOk,
+}) {
   const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'dark');
   const [pro, setPro] = useState(
     () => typeof localStorage !== 'undefined' && localStorage.getItem('pro') === '1',
   );
-  const [isAdmin, setIsAdmin] = useState(() => {
+  const [hasAdmin, setHasAdmin] = useState(() => {
     try {
       return !!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN);
     } catch {
@@ -34,12 +42,16 @@ function Header() {
   useEffect(() => {
     const onStorage = () => {
       try {
-        setIsAdmin(!!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN));
+        setHasAdmin(!!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN));
       } catch {}
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   }, []);
+  let apiHost = '';
+  try {
+    apiHost = new URL(process.env.REACT_APP_API_ORIGIN || '').host;
+  } catch {}
   return (
     <header className="container" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
       <img src="/logo.svg" alt="DeepSight" width={28} height={28} />
@@ -49,22 +61,63 @@ function Header() {
       <NavLink to="/search" className={({ isActive }) => (isActive ? 'active' : '')}>
         Search
       </NavLink>
-      <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>
-        Upload
-      </NavLink>
-      <NavLink to="/crawl" className={({ isActive }) => (isActive ? 'active' : '')}>
-        Crawl
-      </NavLink>
+      {flags?.proOnly?.includes?.('upload') && !pro ? (
+        flags?.showHints ? (
+          <button className="btn ghost" disabled title="Pro-only feature">
+            Upload 🔒
+          </button>
+        ) : null
+      ) : (
+        <NavLink to="/upload" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Upload
+        </NavLink>
+      )}
+      {flags?.proOnly?.includes?.('crawl') && !pro ? (
+        flags?.showHints ? (
+          <button className="btn ghost" disabled title="Pro-only feature">
+            Crawl 🔒
+          </button>
+        ) : null
+      ) : (
+        <NavLink to="/crawl" className={({ isActive }) => (isActive ? 'active' : '')}>
+          Crawl
+        </NavLink>
+      )}
       <NavLink to="/pricing" className={({ isActive }) => (isActive ? 'active' : '')}>
         Pricing
       </NavLink>
-      {isAdmin ? (
+      {isAdmin || hasAdmin ? (
         <NavLink to="/admin/flags" className={({ isActive }) => (isActive ? 'active' : '')}>
           Admin
         </NavLink>
-      ) : null}
+      ) : (
+        <button className="btn ghost" onClick={onAdminHelp} title="How to enable admin mode">
+          Admin
+        </button>
+      )}
       <div style={{ flex: 1 }} />
-      {isAdmin ? <span className="tag">ADMIN</span> : null}
+      {isAdmin || hasAdmin ? <span className="tag">ADMIN</span> : null}
+      <button className="btn ghost" onClick={onRefreshFlags} title="Refresh feature flags">
+        Refresh Flags
+      </button>
+      {flagsLoadedAt ? <span className="muted">Flags: {flagsLoadedAt}</span> : null}
+      <button
+        className="btn ghost"
+        onClick={onReloadConfig}
+        title="Clear cached flags and announcement, then reload"
+      >
+        Reload Config
+      </button>
+      {apiHost ? (
+        <span className="tag" title={process.env.REACT_APP_API_ORIGIN}>
+          API: {apiHost}
+        </span>
+      ) : null}
+      {typeof apiOk === 'boolean' ? (
+        <span className="tag" title="API health">
+          {apiOk ? 'API OK' : 'API ERR'}
+        </span>
+      ) : null}
       {pro ? <span className="tag">PRO</span> : null}
       <button className="btn ghost" onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}>
         {theme === 'light' ? 'Dark' : 'Light'} mode
@@ -106,8 +159,38 @@ function TitleSync() {
 
 export default function App() {
   const [meta, setMeta] = useState('');
-  const [announcement, setAnnouncement] = useState('');
-  const [flags, setFlags] = useState({});
+  const [announcement, setAnnouncement] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('flags.json') || 'null');
+      return cached?.announcement || '';
+    } catch {
+      return '';
+    }
+  });
+  const [flags, setFlags] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('flags.json') || '{}') || {};
+    } catch {
+      return {};
+    }
+  });
+  const [showAdminHelp, setShowAdminHelp] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(() => {
+    try {
+      return !!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN);
+    } catch {
+      return !!process.env.REACT_APP_ADMIN_TOKEN;
+    }
+  });
+  const [flagsLoadedAt, setFlagsLoadedAt] = useState(() => {
+    try {
+      const ts = localStorage.getItem('flags.loadedAt');
+      return ts ? new Date(Number(ts)).toLocaleTimeString() : '';
+    } catch {
+      return '';
+    }
+  });
+  const [apiOk, setApiOk] = useState();
 
   useEffect(() => {
     (async () => {
@@ -115,16 +198,21 @@ export default function App() {
         const h = await health();
         const s = await stats().catch(() => ({}));
         setMeta(h.ok ? `API OK · imgs: ${s.images ?? '-'}` : 'API error');
+        setApiOk(!!h.ok);
         try {
           const f = await getFlags();
           const ff = f?.flags || {};
           setFlags(ff);
           try {
             localStorage.setItem('flags.json', JSON.stringify(ff));
+            localStorage.setItem('flags.loadedAt', String(Date.now()));
+            setFlagsLoadedAt(new Date().toLocaleTimeString());
           } catch {}
           const msg = ff.announcement || '';
           const dismissed =
-            typeof localStorage !== 'undefined' && localStorage.getItem('announce.dismiss') === msg;
+            typeof localStorage !== 'undefined' &&
+            (localStorage.getItem('announce.dismiss') === msg ||
+              localStorage.getItem('announce.dismiss') === '*');
           if (msg && !dismissed) setAnnouncement(msg);
         } catch {}
       } catch {
@@ -132,6 +220,36 @@ export default function App() {
       }
     })();
   }, []);
+
+  async function refreshFlags() {
+    try {
+      const f = await getFlags();
+      const ff = f?.flags || {};
+      setFlags(ff);
+      try {
+        localStorage.setItem('flags.json', JSON.stringify(ff));
+        localStorage.setItem('flags.loadedAt', String(Date.now()));
+        setFlagsLoadedAt(new Date().toLocaleTimeString());
+      } catch {}
+      const msg = ff.announcement || '';
+      const dismissed =
+        typeof localStorage !== 'undefined' &&
+        (localStorage.getItem('announce.dismiss') === msg ||
+          localStorage.getItem('announce.dismiss') === '*');
+      if (msg && !dismissed) setAnnouncement(msg);
+    } catch {}
+  }
+
+  function reloadConfig() {
+    try {
+      localStorage.removeItem('flags.json');
+      localStorage.removeItem('flags.loadedAt');
+      localStorage.removeItem('announce.dismiss');
+    } catch {}
+    try {
+      window.location.reload();
+    } catch {}
+  }
 
   function UpgradeBanner() {
     const [pro, setPro] = useState(
@@ -160,7 +278,61 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Header />
+      <Header
+        isAdmin={isAdmin}
+        onAdminHelp={() => setShowAdminHelp(true)}
+        onRefreshFlags={refreshFlags}
+        onReloadConfig={reloadConfig}
+        flags={flags}
+        flagsLoadedAt={flagsLoadedAt}
+        apiOk={apiOk}
+      />
+      {showAdminHelp ? (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowAdminHelp(false)}
+        >
+          <div
+            className="card"
+            style={{ background: 'var(--bg)', padding: 16, width: 520, borderRadius: 8 }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ marginTop: 0 }}>Enable Admin Mode</h3>
+            <ul className="muted">
+              <li>Set a token in your browser: paste below and Save.</li>
+              <li>
+                Or, set <code>REACT_APP_ADMIN_TOKEN</code> in dev or store an{' '}
+                <code>ADMIN_TOKEN</code>
+                secret in the Worker for production.
+              </li>
+            </ul>
+            <div className="row" style={{ gap: 8, marginTop: 8 }}>
+              <input
+                type="password"
+                placeholder="Paste admin token"
+                style={{ flex: 1, minWidth: 280 }}
+                onChange={(e) => {
+                  try {
+                    localStorage.setItem('admin.token', e.target.value);
+                    setIsAdmin(!!e.target.value);
+                  } catch {}
+                }}
+              />
+              <button className="btn" onClick={() => setShowAdminHelp(false)}>
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {announcement ? (
         <div className="container" style={{ marginTop: 8 }}>
           <div
@@ -178,6 +350,17 @@ export default function App() {
               }}
             >
               Dismiss
+            </button>
+            <button
+              className="btn ghost"
+              onClick={() => {
+                try {
+                  localStorage.setItem('announce.dismiss', '*');
+                } catch {}
+                setAnnouncement('');
+              }}
+            >
+              Dismiss all
             </button>
           </div>
         </div>
