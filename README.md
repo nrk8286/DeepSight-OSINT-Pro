@@ -15,6 +15,14 @@
 
 See `AGENTS.md` for detailed contributor guidelines (structure, coding style, testing, and security).
 
+## Optional Vercel frontend hosting
+
+The root `vercel.json` builds the Create React App in `frontend/` and publishes
+`frontend/build/`. Set the Vercel project's root directory to the repository root
+and configure `REACT_APP_API_ORIGIN` to the existing Cloudflare Worker origin.
+Vercel serves the frontend only; the API, D1, and R2 remain on Cloudflare.
+Client-side routes fall back to `index.html`; asset paths retain normal 404s.
+
 ## Admin & Deploy
 
 - Admin token: Set once as a Worker secret (`wrangler secret put ADMIN_TOKEN`). For local tests, export `ADMIN_TOKEN` and use scripts:
