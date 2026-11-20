@@ -8,7 +8,7 @@ import PricingPage from './components/PricingPage';
 import ThankYouPage from './components/ThankYouPage';
 import ProGate from './components/ProGate';
 import AdminFlags from './components/AdminFlags';
-import { health, stats, getFlags, track } from './api';
+import { health, stats, getFlags, track, getAdminToken, API_ORIGIN } from './api';
 
 function Header({
   isAdmin,
@@ -25,9 +25,9 @@ function Header({
   );
   const [hasAdmin, setHasAdmin] = useState(() => {
     try {
-      return !!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN);
+      return !!getAdminToken();
     } catch {
-      return !!process.env.REACT_APP_ADMIN_TOKEN;
+      return false;
     }
   });
   useEffect(() => {
@@ -42,7 +42,7 @@ function Header({
   useEffect(() => {
     const onStorage = () => {
       try {
-        setHasAdmin(!!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN));
+        setHasAdmin(!!getAdminToken());
       } catch {}
     };
     window.addEventListener('storage', onStorage);
@@ -50,7 +50,7 @@ function Header({
   }, []);
   let apiHost = '';
   try {
-    apiHost = new URL(process.env.REACT_APP_API_ORIGIN || '').host;
+    apiHost = new URL(API_ORIGIN || window.location.origin).host;
   } catch {}
   return (
     <header className="container" style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
@@ -109,7 +109,7 @@ function Header({
         Reload Config
       </button>
       {apiHost ? (
-        <span className="tag" title={process.env.REACT_APP_API_ORIGIN}>
+        <span className="tag" title={API_ORIGIN || window.location.origin}>
           API: {apiHost}
         </span>
       ) : null}
@@ -177,9 +177,9 @@ export default function App() {
   const [showAdminHelp, setShowAdminHelp] = useState(false);
   const [isAdmin, setIsAdmin] = useState(() => {
     try {
-      return !!(localStorage.getItem('admin.token') || process.env.REACT_APP_ADMIN_TOKEN);
+      return !!getAdminToken();
     } catch {
-      return !!process.env.REACT_APP_ADMIN_TOKEN;
+      return false;
     }
   });
   const [flagsLoadedAt, setFlagsLoadedAt] = useState(() => {
@@ -308,11 +308,7 @@ export default function App() {
             <h3 style={{ marginTop: 0 }}>Enable Admin Mode</h3>
             <ul className="muted">
               <li>Set a token in your browser: paste below and Save.</li>
-              <li>
-                Or, set <code>REACT_APP_ADMIN_TOKEN</code> in dev or store an{' '}
-                <code>ADMIN_TOKEN</code>
-                secret in the Worker for production.
-              </li>
+              <li>Use the admin token provided by your site administrator.</li>
             </ul>
             <div className="row" style={{ gap: 8, marginTop: 8 }}>
               <input

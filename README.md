@@ -15,6 +15,26 @@
 
 See `AGENTS.md` for detailed contributor guidelines (structure, coding style, testing, and security).
 
+## Optional Vercel frontend hosting
+
+The root `vercel.json` builds the Create React App in `frontend/` and publishes
+`frontend/build/`. Set the Vercel project's root directory to the repository root
+and configure `REACT_APP_API_ORIGIN` to the existing Cloudflare Worker origin.
+Vercel serves the frontend only; the API, D1, and R2 remain on Cloudflare.
+Client-side routes fall back to `index.html`; asset paths retain normal 404s.
+
+Use an API origin that resolves and serves `/api/health` and `/api/images/list`
+as JSON. If `REACT_APP_API_ORIGIN` is unset, the frontend uses same-origin API
+paths, which require an API proxy; static hosting alone cannot provide them.
+Apply `backend/schema.sql` to the Worker's D1 binding before using the gallery.
+Database failures return HTTP 503 so an unavailable database is not displayed
+as an empty, healthy gallery.
+
+Enter the admin token through the app's existing admin-token control. All API
+write operations use that token. Do not set `REACT_APP_ADMIN_TOKEN` during a
+frontend build: client environment variables are public, and the app no longer
+reads an embedded admin secret.
+
 ## Admin & Deploy
 
 - Admin token: Set once as a Worker secret (`wrangler secret put ADMIN_TOKEN`). For local tests, export `ADMIN_TOKEN` and use scripts:

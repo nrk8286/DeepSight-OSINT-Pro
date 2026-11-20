@@ -56,3 +56,5 @@ jobs:
       - name: Lint Worker
         run: |
           ./frontend/node_modules/.bin/eslint backend/worker.js --max-warnings 0
+      - name: Test Worker failure responses
+        run: node --test backend/worker.test.mjs

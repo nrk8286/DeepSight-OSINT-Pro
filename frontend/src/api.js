@@ -1,11 +1,19 @@
-const API = process.env.REACT_APP_API_ORIGIN;
-const ADMIN = process.env.REACT_APP_ADMIN_TOKEN;
+export const API_ORIGIN = (process.env.REACT_APP_API_ORIGIN || '').trim().replace(/\/+$/, '');
+export const apiUrl = (path) => `${API_ORIGIN}${path}`;
+export function getAdminToken() {
+  try {
+    return localStorage.getItem('admin.token') || '';
+  } catch {
+    return '';
+  }
+}
 
 async function j(method, path, body) {
   const headers = {};
   if (body) headers['content-type'] = 'application/json';
-  if (ADMIN) headers['authorization'] = `Bearer ${ADMIN}`;
-  const r = await fetch(`${API}${path}`, {
+  const token = getAdminToken();
+  if (token) headers['authorization'] = `Bearer ${token}`;
+  const r = await fetch(apiUrl(path), {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,
@@ -19,8 +27,10 @@ async function j(method, path, body) {
     throw new Error(msg);
   }
   const ct = r.headers.get('content-type') || '';
-  if (ct.includes('application/json')) return r.json();
-  return r.text();
+  if (!ct.includes('application/json')) {
+    throw new Error('The API returned an unexpected response. Please try again later.');
+  }
+  return r.json();
 }
 
 export const health = () => j('GET', '/api/health');
@@ -28,7 +38,8 @@ export const health = () => j('GET', '/api/health');
 export const getSignedUpload = (key) => j('POST', '/api/images/upload-url', { key });
 
 export async function uploadToR2(putUrl, file) {
-  const headers = ADMIN ? { authorization: `Bearer ${ADMIN}` } : undefined;
+  const token = getAdminToken();
+  const headers = token ? { authorization: `Bearer ${token}` } : undefined;
   const r = await fetch(putUrl, { method: 'PUT', body: file, headers });
   if (!r.ok) throw new Error('upload failed');
   return true;

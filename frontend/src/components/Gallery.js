@@ -1,35 +1,35 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { listImages, deleteImage } from '../api';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { listImages, deleteImage, apiUrl } from '../api';
 
 export default function Gallery() {
   const [items, setItems] = useState([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const [busy, setBusy] = useState(false);
+  const loading = useRef(false);
 
-  const load = useCallback(
-    async (p = 0, reset = false) => {
-      if (busy) return;
-      setBusy(true);
-      try {
-        const out = await listImages(p, 24);
-        setHasMore(out.next_page !== null && out.next_page !== undefined);
-        setPage(p);
-        setItems((prev) => (reset ? out.items : [...prev, ...out.items]));
-      } catch (e) {
-        alert('Failed to load images');
-      } finally {
-        setBusy(false);
-      }
-    },
-    [busy],
-  );
+  const load = useCallback(async (p = 0, reset = false) => {
+    if (loading.current) return;
+    loading.current = true;
+    setBusy(true);
+    try {
+      const out = await listImages(p, 24);
+      setHasMore(out.next_page !== null && out.next_page !== undefined);
+      setPage(p);
+      setItems((prev) => (reset ? out.items : [...prev, ...out.items]));
+    } catch (e) {
+      alert('Failed to load images');
+    } finally {
+      loading.current = false;
+      setBusy(false);
+    }
+  }, []);
 
   useEffect(() => {
     load(0, true);
   }, [load]);
 
-  const r2url = (r2_key) => `${process.env.REACT_APP_API_ORIGIN}/r2/${encodeURIComponent(r2_key)}`;
+  const r2url = (r2_key) => apiUrl(`/r2/${encodeURIComponent(r2_key)}`);
 
   async function remove(id) {
     if (!window.confirm('Delete this image?')) return;
@@ -55,7 +55,11 @@ export default function Gallery() {
         )}
         {items.map((it) => (
           <div className="card" key={it.id}>
-            <img src={r2url(it.r2_key)} alt={it.text || 'image'} loading="lazy" />
+            <img
+              src={it.r2_key ? r2url(it.r2_key) : it.url}
+              alt={it.text || 'image'}
+              loading="lazy"
+            />
             <div className="meta">
               <span
                 title={it.url}
@@ -75,14 +79,22 @@ export default function Gallery() {
                 })()}
               </span>
               <div className="toolbar">
-                <a className="btn ghost" href={r2url(it.r2_key)} target="_blank" rel="noreferrer">
+                <a
+                  className="btn ghost"
+                  href={it.r2_key ? r2url(it.r2_key) : it.url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Open
                 </a>
                 <button
                   className="btn ghost"
-                  onClick={() => {
+                  onClick={async () => {
                     try {
-                      navigator.clipboard.writeText(`${window.location.origin}/i/${it.id}`);
+                      await navigator.clipboard.writeText(
+                        new URL(apiUrl(`/i/${encodeURIComponent(it.id)}`), window.location.origin)
+                          .href,
+                      );
                       alert('Link copied');
                     } catch {
                       alert('Copy failed');

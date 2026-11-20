@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { searchText } from '../api';
+import { searchText, apiUrl } from '../api';
 
 export default function SearchPage() {
   const [q, setQ] = useState('bridge');
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState([]);
 
-  const r2url = (k) => `${process.env.REACT_APP_API_ORIGIN}/r2/${encodeURIComponent(k)}`;
+  const r2url = (k) => apiUrl(`/r2/${encodeURIComponent(k)}`);
 
   async function go() {
     setBusy(true);
