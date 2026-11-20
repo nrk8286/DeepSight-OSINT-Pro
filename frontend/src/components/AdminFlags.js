@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getFlags, track } from '../api';
+import { getFlags, track, API_ORIGIN, apiUrl, getAdminToken } from '../api';
 
 export default function AdminFlags() {
   const [text, setText] = useState('');
@@ -7,7 +7,7 @@ export default function AdminFlags() {
   const [domains, setDomains] = useState([]);
   const [status, setStatus] = useState({});
   const [stack, setStack] = useState({ kv: false, r2: false, d1: false, analytics: false });
-  const apiOrigin = process.env.REACT_APP_API_ORIGIN || '';
+  const apiOrigin = API_ORIGIN;
   const [copied, setCopied] = useState(false);
   const [ann, setAnn] = useState('');
   const [loadedAt, setLoadedAt] = useState('');
@@ -25,7 +25,7 @@ export default function AdminFlags() {
         const ds =
           Array.isArray(flags.domains) && flags.domains.length
             ? flags.domains
-            : [process.env.REACT_APP_API_ORIGIN, window.location.origin].filter(Boolean);
+            : [API_ORIGIN, window.location.origin].filter(Boolean);
         setDomains(ds);
         // kick off checks
         checkDomains(ds);
@@ -34,7 +34,7 @@ export default function AdminFlags() {
       }
       // fetch stack status
       try {
-        const r = await fetch(`${process.env.REACT_APP_API_ORIGIN}/api/status`, {
+        const r = await fetch(apiUrl('/api/status'), {
           headers: { accept: 'application/json' },
         });
         if (r.ok) {
@@ -99,11 +99,8 @@ export default function AdminFlags() {
     setMsg('saving...');
     try {
       const body = JSON.parse(text || '{}');
-      const token =
-        (typeof localStorage !== 'undefined' && localStorage.getItem('admin.token')) ||
-        process.env.REACT_APP_ADMIN_TOKEN ||
-        '';
-      const r = await fetch(`${process.env.REACT_APP_API_ORIGIN}/api/flags`, {
+      const token = getAdminToken();
+      const r = await fetch(apiUrl('/api/flags'), {
         method: 'PUT',
         headers: {
           'content-type': 'application/json',
@@ -124,7 +121,7 @@ export default function AdminFlags() {
         const ds =
           Array.isArray(body.domains) && body.domains.length
             ? body.domains
-            : [process.env.REACT_APP_API_ORIGIN, window.location.origin].filter(Boolean);
+            : [API_ORIGIN, window.location.origin].filter(Boolean);
         setDomains(ds);
         checkDomains(ds);
       } catch {}

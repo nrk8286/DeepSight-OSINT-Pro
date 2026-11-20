@@ -128,13 +128,8 @@ async function router(request, env) {
       const rows = Array.isArray(result?.results) ? result.results : [];
       const next = offset + limit < total ? page + 1 : null;
       return json({ items: rows, next_page: next, total });
-    } catch (err) {
-      return json({
-        items: [],
-        next_page: null,
-        total: 0,
-        note: "images table missing or query failed",
-      });
+    } catch {
+      return json({ error: "database_unavailable" }, { status: 503 });
     }
   }
 
@@ -205,8 +200,8 @@ async function router(request, env) {
         const rows = res?.results || [];
         // Shape similar to frontend expectations (array of matches)
         return json({ matches: rows });
-      } catch (e) {
-        return json({ matches: [] });
+      } catch {
+        return json({ error: "database_unavailable" }, { status: 503 });
       }
     }
     if (kind === "phash") {
@@ -224,7 +219,7 @@ async function router(request, env) {
       const images = r?.results?.[0]?.images || 0;
       return json({ images });
     } catch {
-      return json({ images: 0 });
+      return json({ error: "database_unavailable" }, { status: 503 });
     }
   }
 
@@ -234,7 +229,7 @@ async function router(request, env) {
       const info = {
         kv: !!env.KV,
         r2: !!env.R2,
-        d1: true,
+        d1: !!env.DB,
         analytics: !!env.analytics_engine,
         r2_public_base: env.R2_PUBLIC_BASE || "",
       };
